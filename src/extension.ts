@@ -10,9 +10,10 @@ let cache: Map<string, string[]> = new Map();
 export function activate(context: vscode.ExtensionContext) {
     console.log('Flutter Dependency Platform Checker is now active');
 
+    const provider = new DependencyCodeLensProvider();
     codeLensProvider = vscode.languages.registerCodeLensProvider(
         { language: 'yaml', pattern: '**/pubspec.yaml' },
-        new DependencyCodeLensProvider()
+        provider
     );
 
     context.subscriptions.push(codeLensProvider);
@@ -23,41 +24,58 @@ export function activate(context: vscode.ExtensionContext) {
     // Trigger CodeLens refresh when the document is saved or opened
     vscode.workspace.onDidSaveTextDocument(document => {
         if (document.fileName.endsWith('pubspec.yaml')) {
-            vscode.commands.executeCommand('vscode.executeCodeLensProvider', document.uri);
+            refreshCodeLens(document);
         }
     });
 
     vscode.workspace.onDidOpenTextDocument(document => {
         if (document.fileName.endsWith('pubspec.yaml')) {
-            vscode.commands.executeCommand('vscode.executeCodeLensProvider', document.uri);
+            refreshCodeLens(document);
+        }
+    });
+
+    // Clear CodeLenses when document is closed
+    vscode.workspace.onDidCloseTextDocument(document => {
+        if (document.fileName.endsWith('pubspec.yaml')) {
+            provider.clearCodeLenses();
+            refreshCodeLens(document);
         }
     });
 }
-
 class DependencyCodeLensProvider implements vscode.CodeLensProvider {
+    private codeLenses: vscode.CodeLens[] = [];
+    private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+    public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
+
     async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
-        const codeLenses: vscode.CodeLens[] = [];
-        const text = document.getText();
+        if (document.fileName.endsWith('pubspec.yaml')) {
+            const text = document.getText();
+            try {
+                const parsedYaml = yaml.load(text) as any;
+                const dependencies = { ...parsedYaml.dependencies, ...parsedYaml.dev_dependencies };
 
-        try {
-            const parsedYaml = yaml.load(text) as any;
-            const dependencies = { ...parsedYaml.dependencies, ...parsedYaml.dev_dependencies };
+                this.codeLenses = [];
 
-            for (const [packageName, version] of Object.entries(dependencies)) {
-                const line = document.lineAt(document.positionAt(text.indexOf(packageName)).line);
-                const platformSupport = await checkPlatformSupport(packageName, false);
+                for (const [packageName, version] of Object.entries(dependencies)) {
+                    const line = document.lineAt(document.positionAt(text.indexOf(packageName)).line);
+                    const platformSupport = await checkPlatformSupport(packageName, false);
 
-                const lens = new vscode.CodeLens(line.range, {
-                    title: `Supported platforms: ${platformSupport.join(', ')}`,
-                    command: ''
-                });
-                codeLenses.push(lens);
+                    const lens = new vscode.CodeLens(line.range, {
+                        title: `Supported platforms: ${platformSupport.join(', ')}`,
+                        command: ''
+                    });
+                    this.codeLenses.push(lens);
+                }
+            } catch (error) {
+                console.error('Error parsing pubspec.yaml:', error);
             }
-        } catch (error) {
-            console.error('Error parsing pubspec.yaml:', error);
         }
+        return this.codeLenses;
+    }
 
-        return codeLenses;
+    clearCodeLenses() {
+        this.codeLenses = [];
+        this._onDidChangeCodeLenses.fire();
     }
 }
 
@@ -96,10 +114,15 @@ function extractPlatforms(html: string): string[] {
 async function checkDependencies(forceRefresh: boolean) {
     const editor = vscode.window.activeTextEditor;
     if (editor && editor.document.fileName.endsWith('pubspec.yaml')) {
-        await vscode.commands.executeCommand('vscode.executeCodeLensProvider', editor.document.uri);
+        refreshCodeLens(editor.document);
         vscode.window.showInformationMessage('Flutter dependencies checked');
     }
 }
+function refreshCodeLens(document: vscode.TextDocument) {
+    vscode.commands.executeCommand('vscode.executeCodeLensProvider', document.uri);
+}
+
+
 
 export function deactivate() {
     if (codeLensProvider) {

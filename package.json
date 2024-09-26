@@ -18,7 +18,7 @@
     "commands": [
       {
         "command": "extension.checkFlutterDependencies",
-        "title": "Check Flutter Dependencies"
+        "title": "Flutter Dependency Platform Checker: Check Flutter Dependencies"
       }
     ],
     "languages": [
