@@ -3,6 +3,10 @@
   "displayName": "Flutter Dependency Platform Checker",
   "description": "Checks platform support for Flutter dependencies",
   "version": "0.0.1",
+  "author": {
+    "name": "Shaalan Marwan",
+    "url": "https://github.com/ShaalanMarwan"
+  },
   "engines": {
     "vscode": "^1.93.0"
   },
