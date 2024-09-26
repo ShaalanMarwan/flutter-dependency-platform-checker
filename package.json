@@ -9,13 +9,23 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "workspaceContains:pubspec.yaml",
+    "onLanguage:yaml"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "extension.checkFlutterDependencies",
         "title": "Check Flutter Dependencies"
+      }
+    ],
+    "languages": [
+      {
+        "id": "yaml",
+        "extensions": [".yaml", ".yml"],
+        "aliases": ["YAML", "yaml"]
       }
     ]
   },
@@ -43,5 +53,13 @@
   "dependencies": {
     "@types/js-yaml": "^4.0.9",
     "js-yaml": "^4.1.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ShaalanMarwan/flutter-dependency-platform-checker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ShaalanMarwan/flutter-dependency-platform-checker/issues"
+  },
+  "homepage": "https://github.com/ShaalanMarwan/flutter-dependency-platform-checker#readme"
 }
